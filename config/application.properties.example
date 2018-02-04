@@ -1,0 +1,12 @@
+# TODO: copy this to application.properties and set the credentials for your database.
+# This should be used only for credentials and other local-only config.
+
+logging.level.com.double=DEBUG
+
+# DATASOURCE
+spring.datasource.url=jdbc:postgresql://localhost:5432/grocery_list
+spring.datasource.username=ENTER_USERNAME
+spring.datasource.password=ENTER_PASSWORD
+spring.jpa.hibernate.ddl-auto=update
+
+spring.jpa.properties.hibernate.temp.use_jdbc_metadata_defaults=false

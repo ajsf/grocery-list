@@ -1,0 +1,5 @@
+rootProject.name = 'grocerylist'
+include 'backend'
+include 'backend:api'
+include 'backend:groceries'
+rootProject.buildFileName = 'build.gradle.kts'

@@ -2,6 +2,7 @@ package com.doublea.route
 
 import com.doublea.handler.ApiHandler
 import com.doublea.util.WithLogging
+import org.postgresql.jdbc.EscapedFunctions.LOG
 import org.springframework.context.annotation.Bean
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.server.RouterFunction
@@ -13,18 +14,18 @@ class ApiRoutes(private val apiHandler: ApiHandler) : WithLogging() {
     @Bean
     fun apiRouter(): RouterFunction<ServerResponse> =
             router {
-                ("/api" and accept(MediaType.APPLICATION_JSON_UTF8)).nest {
-                    "/groceries".nest {
-                        GET("/list", apiHandler::getGroceryLists)
-                        POST("/list", apiHandler::saveGroceryList)
-
-                        GET("/list/{id}", apiHandler::getGroceryList)
-                        PUT("/list/{id}", apiHandler::updateGroceryList)
-                        DELETE("/list/{id}", apiHandler::deleteGroceryList)
-
-                        GET("/items", apiHandler::getGroceryItems)
+                ("/api/groceries".nest {
+                    "/list".nest {
+                        GET("/", apiHandler::getGroceryLists)
+                        GET("/{id}", apiHandler::getGroceryList)
+                        DELETE("/{id}", apiHandler::deleteGroceryList)
+                        accept(MediaType.APPLICATION_JSON_UTF8).nest {
+                            POST("/", apiHandler::saveGroceryList)
+                            PUT("/{id}", apiHandler::updateGroceryList)
+                        }
                     }
-                }
+                    GET("/items", apiHandler::getGroceryItems)
+                })
             }.filter { request, next ->
                 LOG.debug(request)
                 next.handle(request)

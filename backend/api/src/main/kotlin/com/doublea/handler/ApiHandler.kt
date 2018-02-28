@@ -1,32 +1,45 @@
 package com.doublea.handler
 
 import com.doublea.*
+import org.springframework.security.core.Authentication
+import org.springframework.security.core.context.ReactiveSecurityContextHolder
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
+import org.springframework.web.reactive.function.server.ServerResponse.*
 import org.springframework.web.reactive.function.server.body
 import org.springframework.web.reactive.function.server.bodyToMono
 import reactor.core.publisher.Mono
+import reactor.core.publisher.toMono
 import javax.validation.Validator
 
 class ApiHandler(private val validator: Validator,
                  private val groceryListService: GroceryListService) {
 
-    fun getGroceryLists(req: ServerRequest) = ServerResponse.ok().body(
-            Mono.just(groceryListService
-                    .fetchGroceryLists().map { it.toDTO() }))
+    fun getGroceryLists(req: ServerRequest) = ok().body(
+            ReactiveSecurityContextHolder
+                    .getContext()
+                    .map {
+                        groceryListService.fetchGroceryListsByUser(it.authentication.name)
+                    }.map { it.map { it.toDTO() } }
+                    .toMono())
 
     fun getGroceryList(req: ServerRequest): Mono<ServerResponse> {
         val id = req.pathVariable("id").toLong()
-        val groceryListDTO: GroceryListDTO? = groceryListService.fetchGroceryList(id)?.toDTO()
+        val groceryListDTO: GroceryListDTO? = groceryListService
+                .fetchGroceryList(id)?.toDTO()
+
         return if (groceryListDTO != null) {
-            ServerResponse.ok().body(Mono.just(groceryListDTO))
+            ok().body(groceryListDTO.toMono())
         } else {
-            ServerResponse.notFound().build()
+            notFound().build()
         }
     }
 
     fun saveGroceryList(req: ServerRequest): Mono<ServerResponse> = req.preProcess()
-            .flatMap { it.save() }
+            .zipWith(ReactiveSecurityContextHolder.getContext())
+            .flatMap {
+                it.t1.save(it.t2.authentication)
+            }
 
     fun updateGroceryList(req: ServerRequest): Mono<ServerResponse> = req.preProcess()
             .flatMap { it.update() }
@@ -58,24 +71,26 @@ class ApiHandler(private val validator: Validator,
         })
     }
 
-    private fun GroceryListDTO.save(): Mono<ServerResponse> = when {
-        fieldErrors != null -> ServerResponse.unprocessableEntity().body(Mono.just(this))
+    private fun GroceryListDTO.save(auth: Authentication): Mono<ServerResponse> = when {
+        fieldErrors != null -> unprocessableEntity().body(this.toMono())
         id != null -> {
             genericError = "List already has an ID. Use update operation."
-            ServerResponse.unprocessableEntity().body(Mono.just(this))
+            unprocessableEntity().body(Mono.just(this))
         }
-        else -> ServerResponse.ok().body(Mono.just(groceryListService.saveGroceryList(this.toGroceryList()).toDTO()))
+        else -> {
+            ok().body(groceryListService.saveGroceryList(this.toGroceryList(auth.name)).toDTO().toMono())
+        }
     }
 
     private fun GroceryListDTO.update(): Mono<ServerResponse> = when {
-        fieldErrors != null -> ServerResponse.unprocessableEntity().body(Mono.just(this))
+        fieldErrors != null -> unprocessableEntity().body(this.toMono())
         id == null -> {
             genericError = "List does not have an ID. Use save operation."
-            ServerResponse.unprocessableEntity().body(Mono.just(this))
+            unprocessableEntity().body(Mono.just(this))
         }
         else -> groceryListService
-                .updateGroceryList(toGroceryList())
-                .map { ServerResponse.ok().body(Mono.just(it)) }
+                .updateGroceryList(toGroceryList(""))
+                .map { ok().body(Mono.just(it)) }
                 .orElseGet {
                     genericError = "Unable to update list. ID invalid."
                     ServerResponse.badRequest().body(Mono.just(this))
@@ -83,13 +98,13 @@ class ApiHandler(private val validator: Validator,
     }
 
     private fun GroceryListDTO.delete(): Mono<ServerResponse> = when {
-        fieldErrors != null -> ServerResponse.unprocessableEntity().body(Mono.just(this))
+        fieldErrors != null -> unprocessableEntity().body(Mono.just(this))
         else -> groceryListService
-                .deleteGroceryList(this.toGroceryList())
-                .map { ServerResponse.ok().body(Mono.just(it)) }
+                .deleteGroceryList(this.toGroceryList(""))
+                .map { ok().body(it.toMono()) }
                 .orElseGet {
                     this.genericError = "Unable to delete item."
-                    ServerResponse.badRequest().body(Mono.just(this))
+                    badRequest().body(this.toMono())
                 }
     }
 }

@@ -17,6 +17,8 @@ data class GroceryList(
         @ElementCollection(fetch = FetchType.EAGER)
         val groceries: List<GroceryListEntry>,
 
+        val owner: String,
+
         @Id
         @GeneratedValue(strategy = GenerationType.AUTO)
         val id: Long? = null

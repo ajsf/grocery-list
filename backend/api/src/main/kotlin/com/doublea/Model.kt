@@ -5,6 +5,7 @@ import java.util.*
 import javax.validation.constraints.Min
 import javax.validation.constraints.Size
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class GroceryListDTO(
         @get:Size(min = 2) val title: String,
         val groceries: List<GroceryListEntryDTO>,
@@ -29,11 +30,12 @@ data class GroceryListEntryDTO(
         val grocery: String
 )
 
-fun GroceryListDTO.toGroceryList() = GroceryList(
+fun GroceryListDTO.toGroceryList(owner: String) = GroceryList(
         title,
         createDate,
         modifiedDate,
         groceries.toListOfGroceryListEntry(),
+        owner,
         id
 )
 

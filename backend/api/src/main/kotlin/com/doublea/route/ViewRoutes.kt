@@ -16,7 +16,7 @@ class ViewRoutes(private val groceryListService: GroceryListService) {
             router {
                 accept(MediaType.TEXT_HTML).nest {
                     GET("/hello") { req ->
-                        val name = req.queryParam("name").orElse("User")
+                        val name = req.queryParam("name").orElse("GroceryUser")
                         ServerResponse.ok()
                                 .htmlView(Mono.just(
                                         index("Hello world")

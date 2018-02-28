@@ -4,6 +4,7 @@ import java.util.*
 
 interface GroceryListService {
     fun fetchGroceryLists(): List<GroceryList>
+    fun fetchGroceryListsByUser(username: String): List<GroceryList>
     fun fetchGroceryList(id: Long): GroceryList?
     fun saveGroceryList(groceryList: GroceryList): GroceryList
     fun updateGroceryList(groceryList: GroceryList): Optional<GroceryList>
@@ -18,6 +19,9 @@ internal class GroceryListServiceImpl(
 
     override fun fetchGroceryLists(): List<GroceryList> =
             groceryListRepository.findAll().toList()
+
+    override fun fetchGroceryListsByUser(username: String): List<GroceryList> =
+            groceryListRepository.findAllByOwner(username)
 
     override fun fetchGroceryList(id: Long): GroceryList? =
             groceryListRepository.findById(id).orElse(null)
